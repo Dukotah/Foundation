@@ -119,5 +119,51 @@ Here will go the methodology for the repository structure
 
 ## Developing a new algorithm
 
-Here will go a quick-start for creating a new set of Cryptol specs,
-reference implementations, assurance artifacts, etc.
+The existing specifications under [`algorithms`](../algorithms) share
+a common layout. A new algorithm `<Name>` would typically add:
+
+```
+algorithms/<Name>/
+  Bibliography.md   Documents cited by the specification and tests.
+  Main.cry          The specification (module `algorithms::<Name>::Main`).
+  Types.cry         Optional: shared type definitions.
+  tests/            Test vector modules.
+  theorems/         Optional: SAW scripts proving properties.
+  rust/             Optional: Rust reference implementation / FFI.
+```
+
+* **Module names follow file paths.** `algorithms/<Name>/Main.cry`
+  must declare `module algorithms::<Name>::Main`; otherwise other
+  modules cannot `import` it.
+* **Cite the standard.** Docstrings and comments reference sections
+  of the documents listed in `Bibliography.md` using their bracketed
+  keys, for example `[FIPS-PUB-198-1 Section 2.3]`. Follow the
+  [Cryptol style guide](cryptol-style.md), and make sure each file
+  loads without warnings. Fenced code blocks in docstrings are run by
+  `:check-docstrings`, so they must contain valid REPL commands (see
+  `algorithms/Keccak/Main.cry`); indent pseudocode instead of fencing
+  it.
+* **Reuse existing building blocks.** For example, hash functions
+  instantiate [`packaging::Hash`](../packaging/Hash.cry), which
+  provides `hash`, `HMAC` and `PBKDF2` for each instance (see
+  `algorithms/SHA2/SHA256.cry` or `algorithms/SHA1/Main.cry`).
+* **Tests** live in `tests/` as modules named
+  `algorithms::<Name>::tests::<Suite>`. Each test vector is a
+  `property` comparing the specification's output against a
+  published known answer, and the source of the vectors is cited in
+  `Bibliography.md`. Run them in the Cryptol interpreter with
+  `:check`, for example:
+
+  ```console
+  $ export CRYPTOLPATH=/workspaces/foundation
+  $ cryptol
+  Cryptol> :module algorithms::<Name>::tests::<Suite>
+  Cryptol> :check
+  ```
+
+  CI loads every `.cry` file (see
+  [`load-all-cry-files.py`](../.ci/load-all-cry-files.py)), so test
+  modules must at least typecheck.
+* **Theorems** live in `theorems/` as SAW scripts. A `theorems/all.saw`
+  that includes the others is run by CI (see
+  [`run-top-level-saw-files.sh`](../.ci/run-top-level-saw-files.sh)).
