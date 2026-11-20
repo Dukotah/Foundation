@@ -1,4 +1,4 @@
-FROM ghcr.io/nationalsecurityagency/foundation/cryptol-tools:latest
+FROM ghcr.io/dukotah/foundation/cryptol-tools:latest
 
 # Install some tools to assist with development.
 RUN apt-get update -y \

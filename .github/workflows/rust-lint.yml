@@ -12,7 +12,7 @@ jobs:
   cargo-fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/nationalsecurityagency/foundation/cargo:latest
+      image: ghcr.io/dukotah/foundation/cargo:latest
     steps:
      - name: Check out code
        uses: actions/checkout@v7
@@ -26,7 +26,7 @@ jobs:
   cargo-clippy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/nationalsecurityagency/foundation/cargo:latest
+      image: ghcr.io/dukotah/foundation/cargo:latest
     steps:
      - name: Check out code
        uses: actions/checkout@v7
@@ -40,7 +40,7 @@ jobs:
   cargo-test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/nationalsecurityagency/foundation/cargo:latest
+      image: ghcr.io/dukotah/foundation/cargo:latest
     steps:
      - name: Check out code
        uses: actions/checkout@v7

@@ -1,4 +1,4 @@
-FROM ghcr.io/nationalsecurityagency/foundation/base:latest
+FROM ghcr.io/dukotah/foundation/base:latest
 
 COPY --from=ghcr.io/galoisinc/crux-mir:latest --chown=root:root /home/crux-mir/.cargo/* /usr/local/bin/
 COPY --from=ghcr.io/galoisinc/crux-mir:latest --chown=root:root /home/crux-mir/.rustup /usr/local/rustup

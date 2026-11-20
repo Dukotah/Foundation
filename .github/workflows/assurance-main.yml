@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'ci-baseline-test'
   schedule:
     - cron: '0 22 * * *'
 
@@ -14,6 +15,10 @@ env:
   SAW_SOLVER_CACHE_PATH: 'saw-cache'
   VENV_CRYPTOL: '/opt/venv/cryptol-remote-api'
   VENV_SAW: '/opt/venv/saw-remote-api'
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
 
@@ -27,10 +32,10 @@ jobs:
   load-all-cry-files:
     needs: build-foundation-image
     runs-on: ubuntu-latest
-    container: ghcr.io/nationalsecurityagency/foundation/cryptol-remote-api-client:latest
+    container: ghcr.io/dukotah/foundation/cryptol-remote-api-client:latest
     services:
       foundation:
-        image: ghcr.io/nationalsecurityagency/foundation/foundation:${{ github.sha }}
+        image: ghcr.io/dukotah/foundation/foundation:${{ github.sha }}
         ports:
           - 8080:8080
     steps:
@@ -43,7 +48,7 @@ jobs:
   load-top-level-SAW-files:
     needs: build-foundation-image
     runs-on: ubuntu-latest
-    container: ghcr.io/nationalsecurityagency/foundation/foundation-saw:${{ github.sha }}
+    container: ghcr.io/dukotah/foundation/foundation-saw:${{ github.sha }}
     steps:
      - name: Prefix 'pwd' onto SAW_SOLVER_CACHE_PATH
        run: echo "SAW_SOLVER_CACHE_PATH=/home/saw/$SAW_SOLVER_CACHE_PATH" >> $GITHUB_ENV
@@ -65,7 +70,7 @@ jobs:
   load-top-level-SAW-python-files:
     needs: build-foundation-image
     runs-on: ubuntu-latest
-    container: ghcr.io/nationalsecurityagency/foundation/foundation-saw:${{ github.sha }}
+    container: ghcr.io/dukotah/foundation/foundation-saw:${{ github.sha }}
     steps:
      - name: Prefix 'pwd' onto SAW_SOLVER_CACHE_PATH
        run: echo "SAW_SOLVER_CACHE_PATH=/home/saw/$SAW_SOLVER_CACHE_PATH" >> $GITHUB_ENV
