@@ -2,9 +2,6 @@ name: Build images
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - 'ci-external-contributors-test'
 
 permissions:
   contents: read
