@@ -6,6 +6,10 @@ on:
     branches:
       - 'ci-external-contributors-test'
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
 
   base:
