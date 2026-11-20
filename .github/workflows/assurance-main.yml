@@ -8,79 +8,142 @@ on:
   schedule:
     - cron: '0 22 * * *'
 
+permissions:
+  contents: read
+  packages: read
+
 env:
-  CRYPTOL_SERVER_URL: 'http://foundation:8080'
-  SAW_SERVER_URL: 'http://localhost:8080'
   SAW_SOLVER_CACHE_PATH: 'saw-cache'
-  VENV_CRYPTOL: '/opt/venv/cryptol-remote-api'
-  VENV_SAW: '/opt/venv/saw-remote-api'
 
 jobs:
 
-  # This job builds the foundation image for this pipeline.
+  # This job builds the foundation payloads for this pipeline. Images
+  # are only published to ghcr.io from this repository itself (pushes to
+  # `main`, the nightly run, and pull requests from branches of this
+  # repository). Pull requests from forks get a read-only GITHUB_TOKEN,
+  # so they skip publishing; the check jobs below build the images
+  # locally from the uploaded payloads instead of pulling them.
   build-foundation-image:
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/release-build-foundation-image.yml
     with:
       sha: ${{ github.sha }}
+      push: ${{ github.repository == 'NationalSecurityAgency/Foundation' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
 
   # This job attempts to load all Cryptol files in foundation.
   load-all-cry-files:
     needs: build-foundation-image
     runs-on: ubuntu-latest
-    container: ghcr.io/nationalsecurityagency/foundation/cryptol-remote-api-client:latest
-    services:
-      foundation:
-        image: ghcr.io/nationalsecurityagency/foundation/foundation:${{ github.sha }}
-        ports:
-          - 8080:8080
     steps:
       - name: Check out code
         uses: actions/checkout@v7
-      - name: Run python script to load all Cryptol files in virtual environment for Cryptol Remote API
-        run: $VENV_CRYPTOL/bin/python3 .ci/load-all-cry-files.py
+      - name: Download foundation payload
+        uses: actions/download-artifact@v8
+        with:
+          name: foundation-tar
+      - name: Login to ghcr.io
+        uses: docker/login-action@v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build foundation image locally
+        run: docker build -f .github/dockerfiles/foundation.Dockerfile -t foundation:ci .
+      - name: Start Cryptol remote API server
+        run: |
+          docker network create foundation-ci
+          docker run -d --name foundation --network foundation-ci -p 8080:8080 foundation:ci
+          for i in $(seq 1 60); do
+            if curl -s -o /dev/null http://localhost:8080; then exit 0; fi
+            sleep 1
+          done
+          docker logs foundation
+          exit 1
+      - name: Load all Cryptol files using the Cryptol Remote API client
+        run: |
+          docker run --rm --network foundation-ci \
+            -e CRYPTOL_SERVER_URL=http://foundation:8080 \
+            -v "$GITHUB_WORKSPACE:/home/cryptol/foundation:ro" \
+            -w /home/cryptol/foundation \
+            ghcr.io/nationalsecurityagency/foundation/cryptol-remote-api-client:latest \
+            sh -c '$VENV_CRYPTOL/bin/python3 .ci/load-all-cry-files.py'
+      - name: Show Cryptol server logs
+        if: always()
+        run: docker logs foundation || true
 
   # This job attempts to run top-level SAW files in foundation.
   load-top-level-SAW-files:
     needs: build-foundation-image
     runs-on: ubuntu-latest
-    container: ghcr.io/nationalsecurityagency/foundation/foundation-saw:${{ github.sha }}
     steps:
-     - name: Prefix 'pwd' onto SAW_SOLVER_CACHE_PATH
-       run: echo "SAW_SOLVER_CACHE_PATH=/home/saw/$SAW_SOLVER_CACHE_PATH" >> $GITHUB_ENV
-     - name: Restore SAW proof cache
-       uses: actions/cache/restore@v6
-       with:
-         path: ${{ env.SAW_SOLVER_CACHE_PATH }}
-         key: ${{ github.ref_name }}-saw-cache-${{ github.sha }}
-         restore-keys: |
-           ${{ github.ref_name }}-saw-cache-
-           main-saw-cache-
-     - name: Clean SAW proof cache
-       run: saw --clean-mismatched-versions-solver-cache
-     - name: Run top-level SAW files.
-       working-directory: /home/saw
-       run: .ci/run-top-level-saw-files.sh
+      - name: Check out code
+        uses: actions/checkout@v7
+      - name: Download foundation-saw payload
+        uses: actions/download-artifact@v8
+        with:
+          name: foundation-saw-tar
+      - name: Login to ghcr.io
+        uses: docker/login-action@v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build foundation-saw image locally
+        run: docker build -f .github/dockerfiles/foundation-saw.Dockerfile -t foundation-saw:ci .
+      - name: Restore SAW proof cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.SAW_SOLVER_CACHE_PATH }}
+          key: ${{ github.ref_name }}-saw-cache-${{ github.sha }}
+          restore-keys: |
+            ${{ github.ref_name }}-saw-cache-
+            main-saw-cache-
+      - name: Run top-level SAW files
+        run: |
+          mkdir -p "$SAW_SOLVER_CACHE_PATH" && chmod 777 "$SAW_SOLVER_CACHE_PATH"
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/$SAW_SOLVER_CACHE_PATH:/home/saw/saw-cache" \
+            -e SAW_SOLVER_CACHE_PATH=/home/saw/saw-cache \
+            -w /home/saw \
+            foundation-saw:ci \
+            sh -c 'saw --clean-mismatched-versions-solver-cache && .ci/run-top-level-saw-files.sh'
 
   # This job attempts to run top-level SAW python files in foundation.
   load-top-level-SAW-python-files:
     needs: build-foundation-image
     runs-on: ubuntu-latest
-    container: ghcr.io/nationalsecurityagency/foundation/foundation-saw:${{ github.sha }}
     steps:
-     - name: Prefix 'pwd' onto SAW_SOLVER_CACHE_PATH
-       run: echo "SAW_SOLVER_CACHE_PATH=/home/saw/$SAW_SOLVER_CACHE_PATH" >> $GITHUB_ENV
-     - name: Restore SAW proof cache
-       uses: actions/cache/restore@v6
-       with:
-         path: ${{ env.SAW_SOLVER_CACHE_PATH }}
-         key: ${{ github.ref_name }}-saw-rust-cache-${{ github.sha }}
-         restore-keys: |
-           ${{ github.ref_name }}-saw-rust-cache-
-           main-saw-rust-cache-
-     - name: Clean SAW proof cache
-       run: saw --clean-mismatched-versions-solver-cache
-     - name: Run top-level SAW python files.
-       working-directory: /home/saw
-       run: |
-         saw-remote-api http --host 0.0.0.0 --port 8080 / &
-         .ci/run-saw-python-files.sh
+      - name: Check out code
+        uses: actions/checkout@v7
+      - name: Download foundation-saw payload
+        uses: actions/download-artifact@v8
+        with:
+          name: foundation-saw-tar
+      - name: Login to ghcr.io
+        uses: docker/login-action@v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build foundation-saw image locally
+        run: docker build -f .github/dockerfiles/foundation-saw.Dockerfile -t foundation-saw:ci .
+      - name: Restore SAW proof cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.SAW_SOLVER_CACHE_PATH }}
+          key: ${{ github.ref_name }}-saw-rust-cache-${{ github.sha }}
+          restore-keys: |
+            ${{ github.ref_name }}-saw-rust-cache-
+            main-saw-rust-cache-
+      - name: Run top-level SAW python files
+        run: |
+          mkdir -p "$SAW_SOLVER_CACHE_PATH" && chmod 777 "$SAW_SOLVER_CACHE_PATH"
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/$SAW_SOLVER_CACHE_PATH:/home/saw/saw-cache" \
+            -e SAW_SOLVER_CACHE_PATH=/home/saw/saw-cache \
+            -e SAW_SERVER_URL=http://localhost:8080 \
+            -w /home/saw \
+            foundation-saw:ci \
+            sh -c 'saw --clean-mismatched-versions-solver-cache && (saw-remote-api http --host 0.0.0.0 --port 8080 / &) && .ci/run-saw-python-files.sh'
