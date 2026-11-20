@@ -1,4 +1,4 @@
-FROM ghcr.io/nationalsecurityagency/foundation/base:latest
+FROM ghcr.io/dukotah/foundation/base:latest
 
 # Setup global install for cargo, rustup, and kani.
 RUN mkdir /usr/local/share/.rustup

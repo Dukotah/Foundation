@@ -2,6 +2,9 @@ name: Build images
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - 'ci-external-contributors-test'
 
 jobs:
 
@@ -15,15 +18,7 @@ jobs:
     with:
       dockerfile: "cryptol-remote-api"
 
-  saw:
-    uses: ./.github/workflows/infrastructure-build-image-template.yml
-    with:
-      dockerfile: "saw"
 
-  saw-remote-api:
-    uses: ./.github/workflows/infrastructure-build-image-template.yml
-    with:
-      dockerfile: "saw-remote-api"
 
   cryptol-remote-api-client:
     needs: base
@@ -31,11 +26,6 @@ jobs:
     with:
       dockerfile: "cryptol-remote-api-client"
 
-  saw-remote-api-client:
-    needs: base
-    uses: ./.github/workflows/infrastructure-build-image-template.yml
-    with:
-      dockerfile: "saw-remote-api-client"
 
   foundation-saw-base:
     needs: base
@@ -55,26 +45,6 @@ jobs:
     with:
       dockerfile: "cargo-saw-build"
 
-  clang:
-    needs: base
-    uses: ./.github/workflows/infrastructure-build-image-template.yml
-    with:
-      dockerfile: "clang"
 
-  cryptol-tools:
-    needs: base
-    uses: ./.github/workflows/infrastructure-build-image-template.yml
-    with:
-      dockerfile: "cryptol-tools"
 
-  cryptol-dev:
-    needs: cryptol-tools
-    uses: ./.github/workflows/infrastructure-build-image-template.yml
-    with:
-      dockerfile: "cryptol-dev"
 
-  saw-dev:
-    needs: cryptol-tools
-    uses: ./.github/workflows/infrastructure-build-image-template.yml
-    with:
-      dockerfile: "saw-dev"

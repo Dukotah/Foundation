@@ -1,4 +1,4 @@
-FROM ghcr.io/nationalsecurityagency/foundation/base:latest
+FROM ghcr.io/dukotah/foundation/base:latest
 
 RUN apt-get update -y \
  && DEBIAN_FRONTEND="noninteractive" apt-get install -y \

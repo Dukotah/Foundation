@@ -67,7 +67,7 @@ jobs:
             -e CRYPTOL_SERVER_URL=http://foundation:8080 \
             -v "$GITHUB_WORKSPACE:/home/cryptol/foundation:ro" \
             -w /home/cryptol/foundation \
-            ghcr.io/nationalsecurityagency/foundation/cryptol-remote-api-client:latest \
+            ghcr.io/dukotah/foundation/cryptol-remote-api-client:latest \
             sh -c '$VENV_CRYPTOL/bin/python3 .ci/load-all-cry-files.py'
       - name: Show Cryptol server logs
         if: always()

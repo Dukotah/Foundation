@@ -22,21 +22,21 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push to branch
         uses: docker/build-push-action@v7
-        if: github.ref_name != 'main'
+        if: false
         with:
           context: .
           push: true
           file: .github/dockerfiles/${{ inputs.dockerfile }}.Dockerfile
-          tags: ghcr.io/nationalsecurityagency/foundation/${{ inputs.dockerfile }}:${{ github.sha }}
+          tags: ghcr.io/dukotah/foundation/${{ inputs.dockerfile }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=min
       - name: Build and push to main
         uses: docker/build-push-action@v7
-        if: github.ref_name == 'main'
+        if: true
         with:
           context: .
           push: true
           file: .github/dockerfiles/${{ inputs.dockerfile }}.Dockerfile
-          tags: ghcr.io/nationalsecurityagency/foundation/${{ inputs.dockerfile }}:latest
+          tags: ghcr.io/dukotah/foundation/${{ inputs.dockerfile }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=min

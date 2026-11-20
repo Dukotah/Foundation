@@ -1,4 +1,4 @@
-FROM ghcr.io/nationalsecurityagency/foundation/base:latest
+FROM ghcr.io/dukotah/foundation/base:latest
 
 # Install Python client for SAW in a virtual environment
 ENV VENV_SAW=/opt/venv/saw-remote-api

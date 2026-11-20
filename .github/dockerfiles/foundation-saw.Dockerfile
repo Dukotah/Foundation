@@ -1,3 +1,3 @@
-FROM ghcr.io/nationalsecurityagency/foundation/foundation-saw-base:latest
+FROM ghcr.io/dukotah/foundation/foundation-saw-base:latest
 
 ADD foundation.tar .
